@@ -1,0 +1,12 @@
+{
+  "name": "hr-analysis",
+  "description": "analyze heart rate obtained from Fitbit",
+  "version": "0.1.0-SNAPSHOT",
+  "dependencies": {
+    "good": "^7.2.0",
+    "good-console": "^6.4.0",
+    "good-squeeze": "^v5.0.2",
+    "hapi": "^16.4.3"
+  }
+}
+
