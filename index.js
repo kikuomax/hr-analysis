@@ -17,7 +17,7 @@ server.register(require('bell'), (err) => {
 		password: process.env.COOKIE_PASSWORD,
 		clientId: process.env.FITBIT_OAUTH2_CLIENT_ID,
 		clientSecret: process.env.FITBIT_OAUTH2_CLIENT_SECRET,
-		isSecure: process.env.FITBIT_SECURED_ACCESS &&
+		isSecure: (process.env.FITBIT_SECURED_ACCESS != null) &&
 			(process.env.FITBIT_SECURED_ACCESS != 0)
 	});
 	// makes sure that the 'fitbit' strategy is registered before
@@ -43,7 +43,7 @@ server.route({
 	method: 'GET',
 	path: '/',
 	handler: function (request, reply) {
-		reply('Hello, world!');
+		reply(`Hello, world! ${ (process.env.FITBIT_SECURED_ACCESS != null) && (process.env.FITBIT_SECURED_ACCESS != 0) }`);
 	}
 });
 
