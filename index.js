@@ -17,8 +17,7 @@ server.register(require('bell'), (err) => {
 		password: process.env.COOKIE_PASSWORD,
 		clientId: process.env.FITBIT_OAUTH2_CLIENT_ID,
 		clientSecret: process.env.FITBIT_OAUTH2_CLIENT_SECRET,
-		isSecure: (process.env.FITBIT_SECURED_ACCESS != null) &&
-			(process.env.FITBIT_SECURED_ACCESS != 0)
+		isSecure: false
 	});
 	// makes sure that the 'fitbit' strategy is registered before
 	// the signin route is added
