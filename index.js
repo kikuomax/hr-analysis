@@ -7,6 +7,38 @@ server.connection({
 	port: process.env.PORT || 3000
 });
 
+// configures the authentication module 'bell'
+server.register(require('bell'), (err) => {
+	if (err) {
+		throw err;
+	}
+	server.auth.strategy('fitbit', 'bell', {
+		provider: 'fitbit',
+		password: process.env.COOKIE_PASSWORD,
+		clientId: process.env.FITBIT_OAUTH2_CLIENT_ID,
+		clientSecret: process.env.FITBIT_OAUTH2_CLIENT_SECRET,
+		isSecure: process.env.FITBIT_SECURED_ACCESS &&
+			(process.env.FITBIT_SECURED_ACCESS != 0)
+	});
+	// makes sure that the 'fitbit' strategy is registered before
+	// the signin route is added
+	server.route({
+		method: 'GET',
+		path: '/signin',
+		config: {
+			auth: 'fitbit',
+			handler: function (request, reply) {
+				if (!request.auth.isAuthenticated) {
+					return reply('Authentication failed due to: ');
+				}
+				return reply(
+					'Signed in as ' +
+					request.auth.credentials.profile.displayName);
+			}
+		}
+	});
+});
+
 server.route({
 	method: 'GET',
 	path: '/',
@@ -17,9 +49,10 @@ server.route({
 
 server.route({
 	method: 'GET',
-	path: '/{name}',
+	path: '/authenticated',
 	handler: function (request, reply) {
-		reply('Hello, ' + encodeURIComponent(request.params.name) + '!');
+		return reply(
+			'Signed in as ' + request.auth.credentials.profile.displayName);
 	}
 });
 

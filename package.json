@@ -3,6 +3,7 @@
   "description": "analyze heart rate obtained from Fitbit",
   "version": "0.1.0-SNAPSHOT",
   "dependencies": {
+    "bell": "^8.7.0",
     "good": "^7.2.0",
     "good-console": "^6.4.0",
     "good-squeeze": "^v5.0.2",
