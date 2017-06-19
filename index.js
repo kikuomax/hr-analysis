@@ -4,7 +4,8 @@ const Hapi = require('hapi');
 
 const server = new Hapi.Server();
 server.connection({
-	port: process.env.PORT || 3000
+	port: process.env.PORT || 3000,
+	host: 'localhost'
 });
 
 // configures the authentication module 'bell'
@@ -26,7 +27,7 @@ server.register(require('bell'), (err) => {
 		path: '/signin',
 		config: {
 			auth: 'fitbit',
-			handler: function (request, reply) {
+			handler: (request, reply) => {
 				if (!request.auth.isAuthenticated) {
 					return reply('Authentication failed due to: ');
 				}
@@ -42,16 +43,7 @@ server.route({
 	method: 'GET',
 	path: '/',
 	handler: function (request, reply) {
-		reply(`Hello, world! ${ (process.env.FITBIT_SECURED_ACCESS != null) && (process.env.FITBIT_SECURED_ACCESS != 0) }`);
-	}
-});
-
-server.route({
-	method: 'GET',
-	path: '/authenticated',
-	handler: function (request, reply) {
-		return reply(
-			'Signed in as ' + request.auth.credentials.profile.displayName);
+		reply(`Hello, world!`);
 	}
 });
 
