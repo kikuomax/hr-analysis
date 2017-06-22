@@ -1,10 +1,11 @@
 'use strict';
 
 const Hapi = require('hapi');
+const Wreck = require('wreck');
 
 const server = new Hapi.Server();
 server.connection({
-	port: process.env.PORT || 3000,
+	port: process.env.PORT || 5000,
 	host: 'localhost'
 });
 
@@ -18,7 +19,8 @@ server.register(require('bell'), (err) => {
 		password: process.env.COOKIE_PASSWORD,
 		clientId: process.env.FITBIT_OAUTH2_CLIENT_ID,
 		clientSecret: process.env.FITBIT_OAUTH2_CLIENT_SECRET,
-		isSecure: false
+		isSecure: false,
+		scope: ['profile', 'activity', 'heartrate', 'sleep']
 	});
 	// makes sure that the 'fitbit' strategy is registered before
 	// the signin route is added
@@ -31,9 +33,23 @@ server.register(require('bell'), (err) => {
 				if (!request.auth.isAuthenticated) {
 					return reply('Authentication failed due to: ');
 				}
-				return reply(
-					'Signed in as ' +
-					request.auth.credentials.profile.displayName);
+				const requestOptions = {
+					headers: {
+						Authorization:
+							`Bearer ${ request.auth.credentials.token }`
+					},
+					json: true
+				};
+				Wreck.get(
+					'https://api.fitbit.com/1/user/-/profile.json',
+					requestOptions,
+					(err, response, payload) => {
+						if (err) {
+							console.log(err);
+							return reply(err);
+						}
+						return reply(`<pre>${ JSON.stringify(payload) }</pre>`);
+					});
 			}
 		}
 	});
