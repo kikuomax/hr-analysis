@@ -58,8 +58,25 @@ server.register([
 		server.route({
 			method: 'GET',
 			path: '/menu',
-			handler: (request, reply) => {
-				reply.file('./static/menu.html');
+			handler: {
+				file: './static/menu.html'
+			}
+		});
+		server.route({
+			method: 'GET',
+			path: '/profile',
+			handler: {
+				file: './static/profile.html'
+			}
+		});
+		server.route({
+			method: 'GET',
+			path: '/lib/{param*}',
+			handler: {
+				directory: {
+					path: './static/lib',
+					index: false
+				}
 			}
 		});
 		server.route({
@@ -90,7 +107,7 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
-			path: '/profile',
+			path: '/data/profile.json',
 			handler: (request, reply) => {
 				cache.get('tokens', (err, cached) => {
 					if (err) {
@@ -101,7 +118,8 @@ server.register([
 						headers: {
 							Authorization: `Bearer ${ cached.token }`
 						},
-						json: true
+						json: true,
+						cors: true  // JSON type needs preflight
 					};
 					Wreck.get(
 						'https://api.fitbit.com/1/user/-/profile.json',
@@ -111,8 +129,7 @@ server.register([
 								console.log(err);
 								return reply(err);
 							}
-							return reply(
-								`<pre>${ JSON.stringify(payload) }</pre>`);
+							return reply(payload);
 						});
 				});
 			}

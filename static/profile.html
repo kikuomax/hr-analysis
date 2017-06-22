@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Personal HR Analysis: Profile</title>
+  <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/vue.min.js'></script>
+  <script>
+    $(() => {
+        const model = new Vue({
+            el: '#contents',
+            data: {
+                name: 'loading ...'
+            }
+        }); 
+        // requests the profile
+        $.ajax('/data/profile.json')
+            .done((contents) => {
+                console.debug(contents);
+                model.name = contents.user.displayName;
+            });
+    });
+  </script>
+</head>
+<body>
+  <div id='contents'>
+    Name: {{ name }}
+  </div>
+</body>
+</html>
+
