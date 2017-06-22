@@ -16,6 +16,7 @@ const cache = server.cache({
 });
 
 server.register([
+	require('inert'),
 	require('bell'),
 	{
 		register: require('good'),
@@ -51,7 +52,14 @@ server.register([
 			method: 'GET',
 			path: '/',
 			handler: (request, reply) => {
-				reply(`Hello, world!`);
+				reply.file('./static/index.html');
+			}
+		});
+		server.route({
+			method: 'GET',
+			path: '/menu',
+			handler: (request, reply) => {
+				reply.file('./static/menu.html');
 			}
 		});
 		server.route({
@@ -76,9 +84,7 @@ server.register([
 								return reply(err);
 							}
 						});
-					return reply(
-						'Logged in as ' +
-						request.auth.credentials.profile.displayName);
+					return reply.redirect('/menu');
 				}
 			}
 		});

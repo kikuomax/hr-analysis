@@ -11,6 +11,7 @@
     "good-console": "6.4.0",
     "good-squeeze": "v5.0.2",
     "hapi": "16.4.3",
+    "inert": "4.2.0",
     "wreck": "12.2.2"
   }
 }
