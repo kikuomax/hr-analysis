@@ -16,7 +16,6 @@
         // requests the profile
         $.ajax('/data/profile.json')
             .done((contents) => {
-                console.debug(contents);
                 model.name = contents.user.displayName;
             });
     });

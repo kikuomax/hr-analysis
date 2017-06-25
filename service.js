@@ -1,5 +1,6 @@
 'use strict';
 
+const Boom = require('boom');
 const Hapi = require('hapi');
 const Wreck = require('wreck');
 
@@ -71,6 +72,13 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
+			path: '/heart-rate',
+			handler: {
+				file: './static/heart-rate.html'
+			}
+		});
+		server.route({
+			method: 'GET',
 			path: '/lib/{param*}',
 			handler: {
 				directory: {
@@ -116,13 +124,58 @@ server.register([
 					}
 					const requestOptions = {
 						headers: {
-							Authorization: `Bearer ${ cached.token }`
+							Authorization: `Bearer ${cached.token}`
 						},
 						json: true,
-						cors: true  // JSON type needs preflight
+						cors: true  // Authorization needs preflight
 					};
 					Wreck.get(
 						'https://api.fitbit.com/1/user/-/profile.json',
+						requestOptions,
+						(err, response, payload) => {
+							if (err) {
+								console.log(err);
+								return reply(err);
+							}
+							return reply(payload);
+						});
+				});
+			}
+		});
+		server.route({
+			method: 'GET',
+			path: '/data/heart-rate.json',
+			handler: (request, reply) => {
+				const date = request.query.date;
+				const startTime = request.query.startTime;
+				const stopTime = request.query.stopTime;
+				if (!date) {
+					return reply(
+						Boom.badRequest('"date" parameter is required'));
+				}
+				let apiUri;
+				if (startTime && stopTime) {
+					apiUri = `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec/time/${startTime}/${stopTime}.json`;
+				} else {
+					if (startTime || stopTime) {
+						console.warn('both of "startTime" and "stopTime" parameters must be specified if one of them is specified');
+					}
+					apiUri = `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec.json`;
+				}
+				cache.get('tokens', (err, cached) => {
+					if (err) {
+						console.log(err);
+						return reply(err);
+					}
+					const requestOptions = {
+						headers: {
+							Authorization: `Bearer ${cached.token}`
+						},
+						json: true,
+						cors: true  // Authorization needs preflight
+					};
+					Wreck.get(
+						apiUri,
 						requestOptions,
 						(err, response, payload) => {
 							if (err) {

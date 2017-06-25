@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Personal HR Analysis: HR</title>
+  <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/d3.min.js'></script>
+  <script>
+    $(() => {
+        const margin = {
+            top: 20,
+            right: 20,
+            bottom: 30,
+            left: 50
+        };
+        const container = document.querySelector('#container');
+        const svg = d3.select('#plot-area');
+        svg.attr('width', container.clientWidth);
+        svg.attr('height', container.clientHeight);
+        const width = container.clientWidth - (margin.left + margin.right);
+        const height = container.clientHeight - (margin.top + margin.bottom);
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
+        const scaleX = d3.scaleTime().rangeRound([0, width]);
+        const scaleY = d3.scaleLinear().rangeRound([height, 0]);
+        const line = d3.line()
+            .x((d) => scaleX(d.time))
+            .y((d) => scaleY(d.value));
+        // requests the heart rate
+        $.ajax('/data/heart-rate.json?date=2017-06-01&startTime=00%3A00&stopTime=01%3A00')
+            .done((contents) => {
+                const date = contents['activities-heart'][0].dateTime;
+                const data = contents['activities-heart-intraday'].dataset
+                    .map((d) => {
+                        d.time = parseDateTime(date + 'T' + d.time);
+                        return d;
+                    });
+                scaleX.domain(d3.extent(data, (d) => d.time));
+                scaleY.domain(d3.extent(data, (d) => d.value));
+                g.append('path')
+                    .datum(data)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'steelblue')
+                    .attr('stroke-linejoin', 'round')
+                    .attr('stroke-linecap', 'round')
+                    .attr('stroke-width', 1.0)
+                    .attr('marker-mid', 'url(#circle-marker)')
+                    .attr('d', line);
+            });
+    });
+  </script>
+</head>
+<body>
+  <div id='container' style='width: 100%; height: 300px'>
+    <svg id='plot-area'>
+      <defs>
+        <marker id='circle-marker'
+            markerWidth='3' markerHeight='3' refX='1' refY='1'>
+          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000'>
+          </circle>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</body>
+</html>
+
