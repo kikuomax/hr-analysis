@@ -19,6 +19,7 @@ const cache = server.cache({
 server.register([
 	require('inert'),
 	require('bell'),
+	require('hapi-auth-cookie'),
 	{
 		register: require('good'),
 		options: {
@@ -48,6 +49,24 @@ server.register([
 			isSecure: false,
 				// should be true, but the localhost version needs false
 			scope: ['profile', 'activity', 'heartrate', 'sleep']
+		});
+		server.auth.strategy('session', 'cookie', true, {
+			password: process.env.COOKIE_PASSWORD,
+			cookie: 'fitbit-signin',
+			redirectTo: '/signin',
+			isSecure: false,
+				// should be true, but the localhost version needs false
+			validateFunc: (request, session, callback) => {
+				cache.get(session.sid, (err, cached) => {
+					if (err) {
+						return callback(err, false);
+					}
+					if (!cached) {
+						return callback(null, false);
+					}
+					return callback(null, true, cached);
+				});
+			}
 		});
 		server.route({
 			method: 'GET',
@@ -92,12 +111,18 @@ server.register([
 			path: '/signin',
 			config: {
 				auth: 'fitbit',
+				plugins: {
+					'hapi-auth-cookie': {
+						redirectTo: false
+					}
+				},
 				handler: (request, reply) => {
 					if (!request.auth.isAuthenticated) {
 						return reply('Authentication failed due to: ');
 					}
+					const userId = request.auth.credentials.profile.id;
 					cache.set(
-						'tokens',
+						userId,
 						{
 							token: request.auth.credentials.token,
 							refreshToken: request.auth.credentials.refreshToken
@@ -108,8 +133,9 @@ server.register([
 								console.log(err);
 								return reply(err);
 							}
+							request.cookieAuth.set({ sid: userId });
+							return reply.redirect('/menu');
 						});
-					return reply.redirect('/menu');
 				}
 			}
 		});
@@ -117,29 +143,27 @@ server.register([
 			method: 'GET',
 			path: '/data/profile.json',
 			handler: (request, reply) => {
-				cache.get('tokens', (err, cached) => {
-					if (err) {
-						console.log(err);
-						return reply(err);
-					}
-					const requestOptions = {
-						headers: {
-							Authorization: `Bearer ${cached.token}`
-						},
-						json: true,
-						cors: true  // Authorization needs preflight
-					};
-					Wreck.get(
-						'https://api.fitbit.com/1/user/-/profile.json',
-						requestOptions,
-						(err, response, payload) => {
-							if (err) {
-								console.log(err);
-								return reply(err);
-							}
-							return reply(payload);
-						});
-				});
+				if (err) {
+					console.log(err);
+					return reply(err);
+				}
+				const requestOptions = {
+					headers: {
+						Authorization: `Bearer ${request.auth.credentials.token}`
+					},
+					json: true,
+					cors: true  // Authorization needs preflight
+				};
+				Wreck.get(
+					'https://api.fitbit.com/1/user/-/profile.json',
+					requestOptions,
+					(err, response, payload) => {
+						if (err) {
+							console.log(err);
+							return reply(err);
+						}
+						return reply(payload);
+					});
 			}
 		});
 		server.route({
@@ -162,29 +186,27 @@ server.register([
 					}
 					apiUri = `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec.json`;
 				}
-				cache.get('tokens', (err, cached) => {
-					if (err) {
-						console.log(err);
-						return reply(err);
-					}
-					const requestOptions = {
-						headers: {
-							Authorization: `Bearer ${cached.token}`
-						},
-						json: true,
-						cors: true  // Authorization needs preflight
-					};
-					Wreck.get(
-						apiUri,
-						requestOptions,
-						(err, response, payload) => {
-							if (err) {
-								console.log(err);
-								return reply(err);
-							}
-							return reply(payload);
-						});
-				});
+				if (err) {
+					console.log(err);
+					return reply(err);
+				}
+				const requestOptions = {
+					headers: {
+						Authorization: `Bearer ${request.auth.credentials.token}`
+					},
+					json: true,
+					cors: true  // Authorization needs preflight
+				};
+				Wreck.get(
+					apiUri,
+					requestOptions,
+					(err, response, payload) => {
+						if (err) {
+							console.log(err);
+							return reply(err);
+						}
+						return reply(payload);
+					});
 			}
 		});
 		server.start((err) => {
