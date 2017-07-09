@@ -4,16 +4,46 @@
   <meta charset='utf-8'>
   <title>Personal HR Analysis: HR</title>
   <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/vue.min.js'></script>
+  <script src='/lib/URI-1.18.10.js'></script>
   <script src='/lib/d3.min.js'></script>
   <script>
     $(() => {
+        // processes user input
+        const model = new Vue({
+            el: '#controller',
+            data: {
+                year: '',
+                month: '',
+                day: '',
+                startHour: '',
+                startMinute: '',
+                stopHour: '',
+                stopMinute: ''
+            },
+            methods: {
+                requestHeartRate: function () {
+                    // you cannot use the arrow notation
+                    requestHeartRate(
+                        this.year,
+                        this.month,
+                        this.day,
+                        this.startHour,
+                        this.startMinute,
+                        this.stopHour,
+                        this.stopMinute);
+                }
+            }
+        });
+
+        // prepares the plot area
         const margin = {
             top: 20,
             right: 20,
             bottom: 30,
             left: 50
         };
-        const container = document.querySelector('#container');
+        const container = document.querySelector('#plot-container');
         const svg = d3.select('#plot-area');
         svg.attr('width', container.clientWidth);
         svg.attr('height', container.clientHeight);
@@ -27,38 +57,78 @@
         const line = d3.line()
             .x((d) => scaleX(d.time))
             .y((d) => scaleY(d.value));
-        // requests the heart rate
-        $.ajax('/data/heart-rate.json?date=2017-06-01&startTime=00%3A00&stopTime=01%3A00')
-            .done((contents) => {
-                const date = contents['activities-heart'][0].dateTime;
-                const data = contents['activities-heart-intraday'].dataset
-                    .map((d) => {
-                        d.time = parseDateTime(date + 'T' + d.time);
-                        return d;
-                    });
-                scaleX.domain(d3.extent(data, (d) => d.time));
-                scaleY.domain(d3.extent(data, (d) => d.value));
-                g.append('path')
-                    .datum(data)
-                    .attr('fill', 'none')
-                    .attr('stroke', 'steelblue')
-                    .attr('stroke-linejoin', 'round')
-                    .attr('stroke-linecap', 'round')
-                    .attr('stroke-width', 1.0)
-                    .attr('marker-mid', 'url(#circle-marker)')
-                    .attr('d', line);
+
+        // requests the heart rate and renders it
+        function requestHeartRate(
+            year, month, day, startHour, startMinute, stopHour, stopMinute)
+        {
+            const uri = new URI('/data/heart-rate.json').query({
+                date: `${year}-${month}-${day}`,
+                startTime: `${startHour}:${startMinute}`,
+                stopTime: `${stopHour}:${stopMinute}`
             });
+            $.ajax(uri.toString())
+                .done((contents) => {
+                    const date = contents['activities-heart'][0].dateTime;
+                    const data = contents['activities-heart-intraday'].dataset
+                        .map((d) => {
+                            d.time = parseDateTime(`${date}T${d.time}`);
+                            return d;
+                        });
+                    scaleX.domain([
+                        new Date(year, month - 1, day, startHour, startMinute),
+                        new Date(year, month - 1, day, stopHour, stopMinute)]);
+                    scaleY.domain(d3.extent(data, (d) => d.value));
+                    let serialId = 0;
+                    const paths = g.selectAll('path')
+                        .data([ data ], () => {
+                            ++serialId;
+                            return serialId;
+                        });
+                    paths.enter()
+                        .append('path')
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-linejoin', 'round')
+                        .attr('stroke-linecap', 'round')
+                        .attr('stroke-width', 1.0)
+                        .attr('marker-mid', 'url(#circle-marker)')
+                        .attr('d', line);
+                    paths.exit()
+                        .remove();
+                });
+        }
     });
   </script>
+  <style type='text/css'>
+    #plot-container {
+      width: 100%;
+      height: 300px;
+    }
+  </style>
 </head>
 <body>
-  <div id='container' style='width: 100%; height: 300px'>
+  <div id='controller'>
+    <form v-on:submit.prevent='requestHeartRate'>
+      <label>Date:</label>
+      <input v-model='year' placeholder='yyyy' size='5'>-
+      <input v-model='month' placeholder='mm' size='3'>-
+      <input v-model='day' placeholder='dd' size='3'>
+      <label>Start time:</label>
+      <input v-model='startHour' placeholder='HH' size='3'>:
+      <input v-model='startMinute' placeholder='MM' size='3'>
+      <label>Stop time:</label>
+      <input v-model='stopHour' placeholder='HH' size='3'>:
+      <input v-model='stopMinute' placeholder='MM' size='3'>
+      <button type='submit'>Request</button>
+    </form>
+  </div>
+  <div id='plot-container'>
     <svg id='plot-area'>
       <defs>
         <marker id='circle-marker'
             markerWidth='3' markerHeight='3' refX='1' refY='1'>
-          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000'>
-          </circle>
+          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
         </marker>
       </defs>
     </svg>
