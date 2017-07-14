@@ -52,11 +52,29 @@
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
         const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
-        const scaleX = d3.scaleTime().rangeRound([0, width]);
-        const scaleY = d3.scaleLinear().rangeRound([height, 0]);
+        const x = d3.scaleTime().rangeRound([0, width]);
+        const y = d3.scaleLinear().rangeRound([height, 0]);
+        y.domain([30, 200]);
         const line = d3.line()
-            .x((d) => scaleX(d.time))
-            .y((d) => scaleY(d.value));
+            .defined((d) => d)
+            .x((d) => x(d.time))
+            .y((d) => y(d.value));
+        const path = g.append('path')
+            .attr('fill', 'none')
+            .attr('stroke', 'steelblue')
+            .attr('stroke-linejoin', 'round')
+            .attr('stroke-linecap', 'round')
+            .attr('stroke-width', 1.0)
+            .attr('marker-start', 'url(#circle-marker)')
+            .attr('marker-mid', 'url(#circle-marker)')
+            .attr('marker-end', 'url(#circle-marker)');
+        const xAxis = g.append('g')
+            .attr('class', 'axis axis-x')
+            .attr('transform', `translate(0, ${height})`)
+            .call(d3.axisBottom(x));
+        g.append('g')
+            .attr('class', 'axis axis-y')
+            .call(d3.axisLeft(y));
 
         // requests the heart rate and renders it
         function requestHeartRate(
@@ -70,33 +88,39 @@
             $.ajax(uri.toString())
                 .done((contents) => {
                     const date = contents['activities-heart'][0].dateTime;
-                    const data = contents['activities-heart-intraday'].dataset
+                    let data = contents['activities-heart-intraday'].dataset
                         .map((d) => {
                             d.time = parseDateTime(`${date}T${d.time}`);
                             return d;
                         });
-                    scaleX.domain([
+                    x.domain([
                         new Date(year, month - 1, day, startHour, startMinute),
                         new Date(year, month - 1, day, stopHour, stopMinute)]);
-                    scaleY.domain(d3.extent(data, (d) => d.value));
-                    let serialId = 0;
-                    const paths = g.selectAll('path')
-                        .data([ data ], () => {
-                            ++serialId;
-                            return serialId;
-                        });
-                    paths.enter()
-                        .append('path')
-                        .attr('fill', 'none')
-                        .attr('stroke', 'steelblue')
-                        .attr('stroke-linejoin', 'round')
-                        .attr('stroke-linecap', 'round')
-                        .attr('stroke-width', 1.0)
-                        .attr('marker-mid', 'url(#circle-marker)')
+                    data = chunkData(data);
+                    data = data.map((d) => d.concat([null]));
+                    data = Array.prototype.concat.apply([], data);
+                    xAxis.call(d3.axisBottom(x));
+                    path.datum(data)
                         .attr('d', line);
-                    paths.exit()
-                        .remove();
                 });
+        }
+
+        function chunkData(data) {
+            const MAX_GAP = 15 * 1000;  // in milliseconds
+            const chunks = [];
+            let chunkStart = 0;
+            for (let i = 0; (i + 1) < data.length; ++i) {
+                const gap =
+                    data[i + 1].time.getTime() - data[i].time.getTime();
+                if (gap > MAX_GAP) {
+                    chunks.push(data.slice(chunkStart, i + 1));
+                    chunkStart = i + 1;
+                }
+            }
+            if (chunkStart < data.length) {
+                chunks.push(data.slice(chunkStart, data.length));
+            }
+            return chunks;
         }
     });
   </script>
