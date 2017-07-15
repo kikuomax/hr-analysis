@@ -71,7 +71,25 @@ server.register([
 		server.route({
 			method: 'GET',
 			path: '/',
+			config: {
+				// disables the Cookie auth redirection
+				// because it surprises a user if he/she is redirected to
+				// the Fitbit login page without any explanation
+				// the user should be redirected to the menu
+				// if he/she has already been authenticated
+				auth: {
+					mode: 'try'
+				},
+				plugins: {
+					'hapi-auth-cookie': {
+						redirectTo: false
+					}
+				},
+			},
 			handler: (request, reply) => {
+				if (request.auth.isAuthenticated) {
+					return reply.redirect('/menu');
+				}
 				reply.file('./static/index.html');
 			}
 		});
