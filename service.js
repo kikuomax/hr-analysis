@@ -116,6 +116,13 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
+			path: '/step-count',
+			handler: {
+				file: './static/step-count.html'
+			}
+		});
+		server.route({
+			method: 'GET',
 			path: '/lib/{param*}',
 			handler: {
 				directory: {
@@ -188,43 +195,22 @@ server.register([
 			method: 'GET',
 			path: '/data/heart-rate.json',
 			handler: (request, reply) => {
-				const date = request.query.date;
-				const startTime = request.query.startTime;
-				const stopTime = request.query.stopTime;
-				if (!date) {
-					return reply(
-						Boom.badRequest('"date" parameter is required'));
-				}
-				let apiUri;
-				if (startTime && stopTime) {
-					apiUri = `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec/time/${startTime}/${stopTime}.json`;
-				} else {
-					if (startTime || stopTime) {
-						console.warn('both of "startTime" and "stopTime" parameters must be specified if one of them is specified');
-					}
-					apiUri = `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec.json`;
-				}
-				if (err) {
-					console.log(err);
-					return reply(err);
-				}
-				const requestOptions = {
-					headers: {
-						Authorization: `Bearer ${request.auth.credentials.token}`
-					},
-					json: true,
-					cors: true  // Authorization needs preflight
-				};
-				Wreck.get(
-					apiUri,
-					requestOptions,
-					(err, response, payload) => {
-						if (err) {
-							console.log(err);
-							return reply(err);
-						}
-						return reply(payload);
-					});
+				requestIntradayTimeSeries(
+					request,
+					reply,
+					(date) => `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec.json`,
+					(date, startTime, stopTime) => `https://api.fitbit.com/1/user/-/activities/heart/date/${date}/1d/1sec/time/${startTime}/${stopTime}.json`);
+			}
+		});
+		server.route({
+			method: 'GET',
+			path: '/data/step-count.json',
+			handler: (request, reply) => {
+				requestIntradayTimeSeries(
+					request,
+					reply,
+					(date) => `https://api.fitbit.com/1/user/-/activities/steps/date/${date}/1d/1min.json`,
+					(date, startTime, stopTime) => `https://api.fitbit.com/1/user/-/activities/steps/date/${date}/1d/1min/time/${startTime}/${stopTime}.json`);
 			}
 		});
 		server.start((err) => {
@@ -234,4 +220,81 @@ server.register([
 			console.log(`Server running at: ${server.info.uri}`);
 		});
 	});
+
+/**
+ * Requests intraday time series through the Fitbit API.
+ *
+ * The following parameters can be specified in the query part of the request,
+ *  - `date`:
+ *    (mandatory) date of the time series in the format `yyyy-MM-dd`
+ *  - `startTime`:
+ *    (optional) start time of the time series in the format `HH:mm`
+ *  - `stopTime`:
+ *    (optional) stop time of the time series in the format `HH:mm`
+ *
+ * `getAllDayUri` should have a signature similar to the following,
+ *
+ *     getAllDayUri(date) => URI:string
+ *
+ * `getTimeSpanUri` should have a signature similar to the following,
+ *
+ *     getTimeSpanUri(date, startTime, stopTime) => URI:string
+ *
+ * If both of `startTime` and `stopTime` are specified, `getTimeSpanUri` is
+ * called. Otherwise `getAllDayUri` is called.
+ *
+ * The reply will be a JSON object bearing a requested time series.
+ * Please refer to the Fitbit API for details about the JSON structure.
+ *
+ * @method requestIntradayTimeSeries
+ * @static
+ * @param request
+ *     Hapi request object.
+ * @param reply
+ *     Hapi reply object.
+ * @param getAllDayUri
+ *     Function which returns a URI to access whole time series in a given date.
+ * @param getTimeSpanUri
+ *     Function which returns a URI to access time series in a given time span
+ *     on a given date.
+ */
+function requestIntradayTimeSeries(
+		request, reply, getAllDayUri, getTimeSpanUri)
+{
+	const date = request.query.date;
+	const startTime = request.query.startTime;
+	const stopTime = request.query.stopTime;
+	if (!date) {
+		return reply(
+			Boom.badRequest('"date" parameter is required'));
+	}
+	let apiUri;
+	if (startTime && stopTime) {
+		apiUri = getTimeSpanUri(date, startTime, stopTime);
+	} else {
+		if (startTime || stopTime) {
+			console.warn(
+				'both of "startTime" and "stopTime" parameters' +
+				' must be specified if one of them is specified');
+		}
+		apiUri = getAllDayUri(date);
+	}
+	const requestOptions = {
+		headers: {
+			Authorization: `Bearer ${request.auth.credentials.token}`
+		},
+		json: true,
+		cors: true  // Authorization needs preflight
+	};
+	Wreck.get(
+		apiUri,
+		requestOptions,
+		(err, response, payload) => {
+			if (err) {
+				console.log(err);
+				return reply(err);
+			}
+			return reply(payload);
+		});
+}
 

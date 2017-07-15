@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Step count</title>
+  <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/vue.min.js'></script>
+  <script src='/lib/URI-1.18.10.js'></script>
+  <script src='/lib/d3.min.js'></script>
+  <script>
+    $(() => {
+        // processes user input
+        const model = new Vue({
+            el: '#controller',
+            data: {
+                range: {
+                    year: '',
+                    month: '',
+                    day: '',
+                    startHour: '',
+                    startMinute: '',
+                    stopHour: '',
+                    stopMinute: ''
+                }
+            },
+            methods: {
+                requestStepCount: function () {
+                    // do not use the arrow notation
+                    // because that screws up `this` bining
+                    requestStepCount(this.range);
+                }
+            }
+        });
+
+        // prepares the plot area
+        const margin = {
+            top: 20,
+            right: 20,
+            bottom: 30,
+            left: 50
+        };
+        const container = document.querySelector('#plot-container');
+        const svg = d3.select('#plot-area');
+        svg.attr('width', container.clientWidth);
+        svg.attr('height', container.clientHeight);
+        const width = container.clientWidth - (margin.left + margin.right);
+        const height = container.clientHeight - (margin.top + margin.bottom);
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
+        const x = d3.scaleTime().rangeRound([0, width]);
+        const y = d3.scaleLinear().rangeRound([height, 0]);
+        y.domain([0, 300]);
+        const line = d3.line()
+            .x((d) => x(d.time))
+            .y((d) => y(d.value));
+        const path = g.append('path')
+            .attr('fill', 'none')
+            .attr('stroke', 'steelblue')
+            .attr('stroke-linejoin', 'round')
+            .attr('stroke-linecap', 'round')
+            .attr('stroke-width', 1.0)
+            .attr('marker-start', 'url(#circle-marker)')
+            .attr('marker-mid', 'url(#circle-marker)')
+            .attr('marker-end', 'url(#circle-marker)');
+        const xAxis = g.append('g')
+            .attr('class', 'axis axis-x')
+            .attr('transform', `translate(0, ${height})`)
+            .call(d3.axisBottom(x));
+        g.append('g')
+            .attr('class', 'axis axis-y')
+            .call(d3.axisLeft(y));
+
+        /** Requests step count time series. */
+        function requestStepCount(range) {
+            const uri = new URI('/data/step-count.json').query({
+                date: `${range.year}-${range.month}-${range.day}`,
+                startTime: `${range.startHour}:${range.startMinute}`,
+                stopTime: `${range.stopHour}:${range.stopMinute}`
+            });
+            $.ajax(uri.toString())
+                .done((contents) => {
+                    const date = contents['activities-steps'][0].dateTime;
+                    let data = contents['activities-steps-intraday'].dataset
+                        .map((d) => {
+                            d.time = parseDateTime(`${date}T${d.time}`);
+                            return d;
+                        });
+                    x.domain([
+                        new Date(
+                            range.year,
+                            range.month - 1,
+                            range.day,
+                            range.startHour,
+                            range.startMinute),
+                        new Date(
+                            range.year,
+                            range.month - 1,
+                            range.day,
+                            range.stopHour,
+                            range.stopMinute)]);
+                    xAxis.call(d3.axisBottom(x));
+                    path.datum(data)
+                        .attr('d', line);
+                });
+        }
+    });
+  </script>
+  <style type='text/css'>
+    #plot-container {
+      width: 100%;
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div id='controller'>
+    <form v-on:submit.prevent='requestStepCount'>
+      <label>Date:</label>
+      <input v-model='range.year' placeholder='yyyy' size='5'>-
+      <input v-model='range.month' placeholder='mm' size='3'>-
+      <input v-model='range.day' placeholder='dd' size='3'>
+      <label>Start time:</label>
+      <input v-model='range.startHour' placeholder='HH' size='3'>:
+      <input v-model='range.startMinute' placeholder='MM' size='3'>
+      <label>Stop time:</label>
+      <input v-model='range.stopHour' placeholder='HH' size='3'>:
+      <input v-model='range.stopMinute' placeholder='MM' size='3'>
+      <button type='submit'>Request</button>
+    </form>
+  </div>
+  <div id='plot-container'>
+    <svg id='plot-area'>
+      <defs>
+        <marker id='circle-marker'
+            markerWidth='3' markerHeight='3' refX='1' refY='1'>
+          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</body>
+</html>
+
