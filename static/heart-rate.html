@@ -3,7 +3,9 @@
 <head>
   <meta charset='utf-8'>
   <title>Personal HR Analysis: HR</title>
+  <link rel='stylesheet' href='/lib/bootstrap-3.3.7/css/bootstrap.min.css'>
   <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/bootstrap-3.3.7/js/bootstrap.min.js'></script>
   <script src='/lib/vue.min.js'></script>
   <script src='/lib/URI-1.18.10.js'></script>
   <script src='/lib/d3.min.js'></script>
@@ -11,7 +13,7 @@
     $(() => {
         // processes user input
         const model = new Vue({
-            el: '#controller',
+            el: '#request-form',
             data: {
                 year: '',
                 month: '',
@@ -32,6 +34,8 @@
                         this.startMinute,
                         this.stopHour,
                         this.stopMinute);
+                    // closes the dialog
+                    $('#request-form').modal('hide');
                 }
             }
         });
@@ -122,6 +126,9 @@
             }
             return chunks;
         }
+
+        // shows the request form
+        $('#request-form').modal('show');
     });
   </script>
   <style type='text/css'>
@@ -132,30 +139,61 @@
   </style>
 </head>
 <body>
-  <div id='controller'>
-    <form v-on:submit.prevent='requestHeartRate'>
-      <label>Date:</label>
-      <input v-model='year' placeholder='yyyy' size='5'>-
-      <input v-model='month' placeholder='mm' size='3'>-
-      <input v-model='day' placeholder='dd' size='3'>
-      <label>Start time:</label>
-      <input v-model='startHour' placeholder='HH' size='3'>:
-      <input v-model='startMinute' placeholder='MM' size='3'>
-      <label>Stop time:</label>
-      <input v-model='stopHour' placeholder='HH' size='3'>:
-      <input v-model='stopMinute' placeholder='MM' size='3'>
-      <button type='submit'>Request</button>
-    </form>
+  <div class='container'>
+     <div>
+      <button type='button' class='btn btn-primary' data-toggle='modal' data-target='#request-form'>Request HR</button>
+    </div>
+    <div id='plot-container'>
+      <svg id='plot-area'>
+        <defs>
+          <marker id='circle-marker'
+              markerWidth='3' markerHeight='3' refX='1' refY='1'>
+            <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
+          </marker>
+        </defs>
+      </svg>
+    </div>
   </div>
-  <div id='plot-container'>
-    <svg id='plot-area'>
-      <defs>
-        <marker id='circle-marker'
-            markerWidth='3' markerHeight='3' refX='1' refY='1'>
-          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
-        </marker>
-      </defs>
-    </svg>
+  <!-- request form -->
+  <div id='request-form' class='modal fade' tabindex='-1' role='dialog' aria-labelledby='request-form-label'>
+    <div class='modal-dialog' role='document'>
+      <div class='modal-content'>
+        <div class='modal-header'>
+          <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+          <h4 id='request-form-label' class='modal-title'>Request HR</h4>
+        </div>
+        <div class='modal-body'>
+          <form v-on:submit.prevent='requestHeartRate'>
+            <label for='year'>Year</label>
+            <input id='year' class='form-control'
+                v-model='year' placeholder='yyyy' size='4'>
+            <label for='month'>Month</label>
+            <input id='month' class='form-control'
+                v-model='month' placeholder='mm' size='2'>
+            <label for='day'>Day</label>
+            <input id='day' class='form-control'
+                v-model='day' placeholder='dd' size='2'>
+            <label for='start-hour'>Start hour</label>
+            <input id='start-hour' class='form-control'
+                v-model='startHour' placeholder='HH' size='2'>
+            <label for='start-minute'>Start minute</label>
+            <input id='start-minute' class='form-control'
+                v-model='startMinute' placeholder='MM' size='2'>
+            <label for='stop-hour'>Stop hour</label>
+            <input id='stop-hour' class='form-control'
+                v-model='stopHour' placeholder='HH' size='2'>
+            <label for='stop-minute'>Stop minute</label>
+            <input id='stop-minute' class='form-control'
+                v-model='stopMinute' placeholder='MM' size='2'>
+            <label for='submit-request' class='sr-only'>Submit</label>
+          </form>
+        </div>
+        <div class='modal-footer'>
+          <button type='button' class='btn btn-default' data-dismiss='modal'>Cancel</button>
+          <button type='button' class='btn btn-primary' v-on:click='requestHeartRate'>Request</button>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>
