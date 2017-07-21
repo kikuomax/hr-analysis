@@ -107,27 +107,47 @@ Vue.component('time-series-request', {
       <div class='modal-body'>
         <form v-on:submit.prevent='requestHeartRate'>
           <label v-bind:for='makeId("year")'>Year</label>
-          <input v-bind:id='makeId("year")' class='form-control'
-              v-model='timeSpan.year' placeholder='yyyy' size='4'>
+		  <select v-bind:id='makeId("year")' class='form-control'
+			  v-model='timeSpan.year'>
+			<option v-for='year in yearOptions'
+			    v-bind:value='year'>{{ year }}</option>
+		  </select>
           <label v-bind:for='makeId("month")'>Month</label>
-          <input v-bind:id='makeId("month")' class='form-control'
-              v-model='timeSpan.month' placeholder='mm' size='2'>
+		  <select v-bind:id='makeId("month")' class='form-control'
+		      v-model='timeSpan.month'>
+			<option v-for='month in monthOptions'
+			    v-bind:value='month'>{{ month }}</option>
+		  </select>
           <label v-bind:for='makeId("day")'>Day</label>
-          <input v-bind:id='makeId("day")' class='form-control'
-              v-model='timeSpan.day' placeholder='dd' size='2'>
+		  <select v-bind:id='makeId("day")' class='form-control'
+			  v-model='timeSpan.day'>
+			<option v-for='day in dayOptions'
+				v-bind:value='day'>{{ day }}</option>
+		  </select>
           <label v-bind:for='makeId("start-hour")'>Start hour</label>
-          <input v-bind:id='makeId("start-hour")' class='form-control'
-              v-model='timeSpan.startHour' placeholder='HH' size='2'>
+		  <select v-bind:id='makeId("start-hour")' class='form-control'
+		      v-model='timeSpan.startHour'>
+			<option v-for='hour in hourOptions'
+			    v-bind:value='hour'>{{ hour }}</option>
+		  </select>
           <label v-bind:for='makeId("start-minute")'>Start minute</label>
-          <input v-bind:id='makeId("start-minute")' class='form-control'
-              v-model='timeSpan.startMinute' placeholder='MM' size='2'>
+		  <select v-bind:id='makeId("start-minute")' class='form-control'
+		      v-model='timeSpan.startMinute'>
+		    <option v-for='minute in minuteOptions'
+			    v-bind:value='minute'>{{ minute }}</option>
+		  </select>
           <label v-bind:for='makeId("stop-hour")'>Stop hour</label>
-          <input v-bind:id='makeId("stop-hour")' class='form-control'
-              v-model='timeSpan.stopHour' placeholder='HH' size='2'>
+		  <select v-bind:id='makeId("stop-hour")' class='form-control'
+		      v-model='timeSpan.stopHour'>
+		    <option v-for='hour in hourOptions'
+			    v-bind:value='hour'>{{ hour }}</option>
+		  </select>
           <label v-bind:for='makeId("stop-minute")'>Stop minute</label>
-          <input v-bind:id='makeId("stop-minute")' class='form-control'
-              v-model='timeSpan.stopMinute' placeholder='MM' size='2'>
-          <label for='submit-request' class='sr-only'>Submit</label>
+		  <select v-bind:id='makeId("stop-minute")' class='form-control'
+		      v-model='timeSpan.stopMinute'>
+		    <option v-for='minute in minuteOptions'
+			    v-bind:value='minute'>{{ minute }}</option>
+		  </select>
         </form>
       </div>
       <div class='modal-footer'>
@@ -138,17 +158,36 @@ Vue.component('time-series-request', {
   </div>
 </div>`,
 	data: function () {
+		const today = new Date();
 		return {
 			timeSpan: {
-				year: '',
-				month: '',
-				day: '',
-				startHour: '',
-				startMinute: '',
-				stopHour: '',
-				stopMinute: ''
-			}
+				year: today.getFullYear(),
+				month: zeroPad(today.getMonth() + 1),  // getMonth returns 0-11
+				day: zeroPad(today.getDate()),
+				startHour: zeroPad(today.getHours()),
+				startMinute: zeroPad(today.getMinutes()),
+				stopHour: zeroPad(today.getHours()),
+				stopMinute: zeroPad(today.getMinutes())
+			},
+			yearOptions: range(2007, today.getFullYear() + 1),
+			monthOptions: range(1, 13).map(zeroPad),
+			dayOptions: range(1, 32).map(zeroPad),
+			hourOptions: range(0, 24).map(zeroPad),
+			minuteOptions: range(0, 60).map(zeroPad)
 		};
+
+		// returns an array of numbers in a given range.
+		function range(start, stop) {
+			return Array.apply(0, Array(stop - start)).map((_, i) => {
+				return start + i;
+			});
+		}
+
+		// zero-pads a given number
+		// x must be an integer >= 0 and < 100.
+		function zeroPad(x) {
+			return x < 10 ? `0${x}` : `${x}`;
+		}
 	},
 	methods: {
 		makeId: function (suffix) {
