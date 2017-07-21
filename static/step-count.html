@@ -3,31 +3,27 @@
 <head>
   <meta charset='utf-8'>
   <title>Step count</title>
+  <link rel='stylesheet' href='/lib/bootstrap-3.3.7/css/bootstrap.min.css'>
   <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/bootstrap-3.3.7/js/bootstrap.min.js'></script>
   <script src='/lib/vue.min.js'></script>
   <script src='/lib/URI-1.18.10.js'></script>
   <script src='/lib/d3.min.js'></script>
+  <script src='/scripts/TimeSeriesRequest.js'></script>
   <script>
     $(() => {
         // processes user input
         const model = new Vue({
-            el: '#controller',
+            el: '#request-form',
             data: {
-                range: {
-                    year: '',
-                    month: '',
-                    day: '',
-                    startHour: '',
-                    startMinute: '',
-                    stopHour: '',
-                    stopMinute: ''
-                }
+                showStepCountRequestDialog: false
             },
             methods: {
-                requestStepCount: function () {
-                    // do not use the arrow notation
-                    // because that screws up `this` bining
-                    requestStepCount(this.range);
+                // NOTE: you cannot use the arrow notation here
+                //       because it screws up `this` binding
+                requestStepCount: function (timeSpan) {
+                    requestStepCount(timeSpan);
+                    this.showStepCountRequestDialog = false;
                 }
             }
         });
@@ -71,12 +67,12 @@
             .attr('class', 'axis axis-y')
             .call(d3.axisLeft(y));
 
-        /** Requests step count time series. */
-        function requestStepCount(range) {
+        // requests step count and renders it
+        function requestStepCount(timeSpan) {
             const uri = new URI('/data/step-count.json').query({
-                date: `${range.year}-${range.month}-${range.day}`,
-                startTime: `${range.startHour}:${range.startMinute}`,
-                stopTime: `${range.stopHour}:${range.stopMinute}`
+                date: `${timeSpan.year}-${timeSpan.month}-${timeSpan.day}`,
+                startTime: `${timeSpan.startHour}:${timeSpan.startMinute}`,
+                stopTime: `${timeSpan.stopHour}:${timeSpan.stopMinute}`
             });
             $.ajax(uri.toString())
                 .done((contents) => {
@@ -88,22 +84,25 @@
                         });
                     x.domain([
                         new Date(
-                            range.year,
-                            range.month - 1,
-                            range.day,
-                            range.startHour,
-                            range.startMinute),
+                            timeSpan.year,
+                            timeSpan.month - 1,
+                            timeSpan.day,
+                            timeSpan.startHour,
+                            timeSpan.startMinute),
                         new Date(
-                            range.year,
-                            range.month - 1,
-                            range.day,
-                            range.stopHour,
-                            range.stopMinute)]);
+                            timeSpan.year,
+                            timeSpan.month - 1,
+                            timeSpan.day,
+                            timeSpan.stopHour,
+                            timeSpan.stopMinute)]);
                     xAxis.call(d3.axisBottom(x));
                     path.datum(data)
                         .attr('d', line);
                 });
         }
+
+        // shows the step count request dialog
+        model.showStepCountRequestDialog = true;
     });
   </script>
   <style type='text/css'>
@@ -114,30 +113,30 @@
   </style>
 </head>
 <body>
-  <div id='controller'>
-    <form v-on:submit.prevent='requestStepCount'>
-      <label>Date:</label>
-      <input v-model='range.year' placeholder='yyyy' size='5'>-
-      <input v-model='range.month' placeholder='mm' size='3'>-
-      <input v-model='range.day' placeholder='dd' size='3'>
-      <label>Start time:</label>
-      <input v-model='range.startHour' placeholder='HH' size='3'>:
-      <input v-model='range.startMinute' placeholder='MM' size='3'>
-      <label>Stop time:</label>
-      <input v-model='range.stopHour' placeholder='HH' size='3'>:
-      <input v-model='range.stopMinute' placeholder='MM' size='3'>
-      <button type='submit'>Request</button>
-    </form>
-  </div>
-  <div id='plot-container'>
-    <svg id='plot-area'>
-      <defs>
-        <marker id='circle-marker'
-            markerWidth='3' markerHeight='3' refX='1' refY='1'>
-          <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
-        </marker>
-      </defs>
-    </svg>
+  <div class='container'>
+    <div id='request-form'>
+      <div>
+        <button type='button' class='btn btn-primary'
+            v-on:click='showStepCountRequestDialog = true'>Request Steps</button>
+      </div>
+      <time-series-request
+          name='Step Count'
+          v-bind:show-dialog='showStepCountRequestDialog'
+          id-prefix='step-count'
+          v-on:time-series-request-confirmed='requestStepCount'
+          v-on:time-series-request-canceled='showStepCountRequestDialog = false'>
+      </time-series-request>
+    </div>
+    <div id='plot-container'>
+      <svg id='plot-area'>
+        <defs>
+          <marker id='circle-marker'
+              markerWidth='3' markerHeight='3' refX='1' refY='1'>
+            <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
+          </marker>
+        </defs>
+      </svg>
+    </div>
   </div>
 </body>
 </html>

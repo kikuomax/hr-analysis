@@ -20,6 +20,7 @@
             },
             methods: {
                 // NOTE: you cannot use the arrow notation here
+                //       because it screws up `this` binding
                 requestHeartRate: function (timeSpan) {
                     requestHeartRate(timeSpan);
                     this.showHeartRateRequestDialog = false;
@@ -134,22 +135,20 @@
   </style>
 </head>
 <body>
-  <div id='request-form'>
-    <div>
-      <button
-          type='button'
-          class='btn btn-primary'
-          v-on:click='showHeartRateRequestDialog = true'>Request HR</button>
-    </div>
-    <time-series-request
-        v-bind:show-dialog='showHeartRateRequestDialog'
-        name='HR'
-        id-prefix='hr'
-        v-on:time-series-request-confirmed='requestHeartRate'
-        v-on:time-series-request-canceled='showHeartRateRequestDialog = false'>
-    </time-series-request>
-  </div>
   <div class='container'>
+    <div id='request-form'>
+      <div>
+        <button type='button' class='btn btn-primary'
+            v-on:click='showHeartRateRequestDialog = true'>Request HR</button>
+      </div>
+      <time-series-request
+          name='HR'
+          v-bind:show-dialog='showHeartRateRequestDialog'
+          id-prefix='hr'
+          v-on:time-series-request-confirmed='requestHeartRate'
+          v-on:time-series-request-canceled='showHeartRateRequestDialog = false'>
+      </time-series-request>
+    </div>
     <div id='plot-container'>
       <svg id='plot-area'>
         <defs>
