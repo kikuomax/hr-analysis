@@ -133,6 +133,16 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
+			path: '/scripts/{param*}',
+			handler: {
+				directory: {
+					path: './static/scripts',
+					index: false
+				}
+			}
+		});
+		server.route({
+			method: 'GET',
 			path: '/signin',
 			config: {
 				auth: 'fitbit',

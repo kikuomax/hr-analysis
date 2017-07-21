@@ -9,33 +9,20 @@
   <script src='/lib/vue.min.js'></script>
   <script src='/lib/URI-1.18.10.js'></script>
   <script src='/lib/d3.min.js'></script>
+  <script src='/scripts/TimeSeriesRequest.js'></script>
   <script>
     $(() => {
         // processes user input
         const model = new Vue({
             el: '#request-form',
             data: {
-                year: '',
-                month: '',
-                day: '',
-                startHour: '',
-                startMinute: '',
-                stopHour: '',
-                stopMinute: ''
+                showHeartRateRequestDialog: false
             },
             methods: {
-                requestHeartRate: function () {
-                    // you cannot use the arrow notation
-                    requestHeartRate(
-                        this.year,
-                        this.month,
-                        this.day,
-                        this.startHour,
-                        this.startMinute,
-                        this.stopHour,
-                        this.stopMinute);
-                    // closes the dialog
-                    $('#request-form').modal('hide');
+                // NOTE: you cannot use the arrow notation here
+                requestHeartRate: function (timeSpan) {
+                    requestHeartRate(timeSpan);
+                    this.showHeartRateRequestDialog = false;
                 }
             }
         });
@@ -81,13 +68,11 @@
             .call(d3.axisLeft(y));
 
         // requests the heart rate and renders it
-        function requestHeartRate(
-            year, month, day, startHour, startMinute, stopHour, stopMinute)
-        {
+        function requestHeartRate(timeSpan) {
             const uri = new URI('/data/heart-rate.json').query({
-                date: `${year}-${month}-${day}`,
-                startTime: `${startHour}:${startMinute}`,
-                stopTime: `${stopHour}:${stopMinute}`
+                date: `${timeSpan.year}-${timeSpan.month}-${timeSpan.day}`,
+                startTime: `${timeSpan.startHour}:${timeSpan.startMinute}`,
+                stopTime: `${timeSpan.stopHour}:${timeSpan.stopMinute}`
             });
             $.ajax(uri.toString())
                 .done((contents) => {
@@ -98,8 +83,18 @@
                             return d;
                         });
                     x.domain([
-                        new Date(year, month - 1, day, startHour, startMinute),
-                        new Date(year, month - 1, day, stopHour, stopMinute)]);
+                        new Date(
+                            timeSpan.year,
+                            timeSpan.month - 1,
+                            timeSpan.day,
+                            timeSpan.startHour,
+                            timeSpan.startMinute),
+                        new Date(
+                            timeSpan.year,
+                            timeSpan.month - 1,
+                            timeSpan.day,
+                            timeSpan.stopHour,
+                            timeSpan.stopMinute)]);
                     data = chunkData(data);
                     data = data.map((d) => d.concat([null]));
                     data = Array.prototype.concat.apply([], data);
@@ -127,8 +122,8 @@
             return chunks;
         }
 
-        // shows the request form
-        $('#request-form').modal('show');
+        // shows the heart rate request form
+        model.showHeartRateRequestDialog = true;
     });
   </script>
   <style type='text/css'>
@@ -139,10 +134,22 @@
   </style>
 </head>
 <body>
-  <div class='container'>
-     <div>
-      <button type='button' class='btn btn-primary' data-toggle='modal' data-target='#request-form'>Request HR</button>
+  <div id='request-form'>
+    <div>
+      <button
+          type='button'
+          class='btn btn-primary'
+          v-on:click='showHeartRateRequestDialog = true'>Request HR</button>
     </div>
+    <time-series-request
+        v-bind:show-dialog='showHeartRateRequestDialog'
+        name='HR'
+        id-prefix='hr'
+        v-on:time-series-request-confirmed='requestHeartRate'
+        v-on:time-series-request-canceled='showHeartRateRequestDialog = false'>
+    </time-series-request>
+  </div>
+  <div class='container'>
     <div id='plot-container'>
       <svg id='plot-area'>
         <defs>
@@ -152,47 +159,6 @@
           </marker>
         </defs>
       </svg>
-    </div>
-  </div>
-  <!-- request form -->
-  <div id='request-form' class='modal fade' tabindex='-1' role='dialog' aria-labelledby='request-form-label'>
-    <div class='modal-dialog' role='document'>
-      <div class='modal-content'>
-        <div class='modal-header'>
-          <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-          <h4 id='request-form-label' class='modal-title'>Request HR</h4>
-        </div>
-        <div class='modal-body'>
-          <form v-on:submit.prevent='requestHeartRate'>
-            <label for='year'>Year</label>
-            <input id='year' class='form-control'
-                v-model='year' placeholder='yyyy' size='4'>
-            <label for='month'>Month</label>
-            <input id='month' class='form-control'
-                v-model='month' placeholder='mm' size='2'>
-            <label for='day'>Day</label>
-            <input id='day' class='form-control'
-                v-model='day' placeholder='dd' size='2'>
-            <label for='start-hour'>Start hour</label>
-            <input id='start-hour' class='form-control'
-                v-model='startHour' placeholder='HH' size='2'>
-            <label for='start-minute'>Start minute</label>
-            <input id='start-minute' class='form-control'
-                v-model='startMinute' placeholder='MM' size='2'>
-            <label for='stop-hour'>Stop hour</label>
-            <input id='stop-hour' class='form-control'
-                v-model='stopHour' placeholder='HH' size='2'>
-            <label for='stop-minute'>Stop minute</label>
-            <input id='stop-minute' class='form-control'
-                v-model='stopMinute' placeholder='MM' size='2'>
-            <label for='submit-request' class='sr-only'>Submit</label>
-          </form>
-        </div>
-        <div class='modal-footer'>
-          <button type='button' class='btn btn-default' data-dismiss='modal'>Cancel</button>
-          <button type='button' class='btn btn-primary' v-on:click='requestHeartRate'>Request</button>
-        </div>
-      </div>
     </div>
   </div>
 </body>
