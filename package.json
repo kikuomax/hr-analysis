@@ -3,7 +3,7 @@
   "description": "analyze heart rate obtained from Fitbit",
   "version": "0.1.0-SNAPSHOT",
   "engines": {
-    "node": "6.11.0"
+    "node": "6.11.1"
   },
   "dependencies": {
     "bell": "8.7.0",
