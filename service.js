@@ -23,7 +23,7 @@ server.register([
 	{
 		register: require('good'),
 		options: {
-		reporters: {
+			reporters: {
 				console: [{
 					module: 'good-squeeze',
 					name: 'Squeeze',
@@ -53,6 +53,7 @@ server.register([
 		server.auth.strategy('session', 'cookie', true, {
 			password: process.env.COOKIE_PASSWORD,
 			cookie: 'fitbit-signin',
+			isSameSite: 'Lax',
 			redirectTo: '/signin',
 			isSecure: false,
 				// should be true, but the localhost version needs false
