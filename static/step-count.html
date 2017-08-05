@@ -125,7 +125,7 @@
           v-bind:show-dialog='showStepCountRequestDialog'
           id-prefix='step-count'
           v-on:time-series-request-confirmed='requestStepCount'
-          v-on:time-series-request-canceled='showStepCountRequestDialog = false'>
+          v-on:time-series-request-cancelled='showStepCountRequestDialog = false'>
       </time-series-request>
     </div>
     <div id='plot-container'>

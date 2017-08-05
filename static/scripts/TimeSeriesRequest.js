@@ -48,7 +48,7 @@
  *
  * This component can emit the following events,
  *  - `time-series-request-confirmed`
- *  - `time-series-request-canceled`
+ *  - `time-series-request-cancelled`
  *
  * It is the parent's responsibility to close the modal dialog.
  * You can set the `show-dialog` attribute to `false`, in your event listener.
@@ -76,9 +76,9 @@
  *     - `stopMinute`:
  *       Minute part of the end of the requested time span.
  *
- * ### time-series-request-canceled
+ * ### time-series-request-cancelled
  *
- * Emitted when the request is canceled.
+ * Emitted when the request is cancelled.
  *
  * No arguments are given to a listener.
  *
@@ -198,7 +198,7 @@ Vue.component('time-series-request', {
 				'time-series-request-confirmed', $.extend({}, this.timeSpan));
 		},
 		cancelRequest: function () {
-			this.$emit('time-series-request-canceled');
+			this.$emit('time-series-request-cancelled');
 		}
 	},
 	watch: {

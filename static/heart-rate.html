@@ -147,7 +147,7 @@
           v-bind:show-dialog='showHeartRateRequestDialog'
           id-prefix='hr'
           v-on:time-series-request-confirmed='requestHeartRate'
-          v-on:time-series-request-canceled='showHeartRateRequestDialog = false'>
+          v-on:time-series-request-cancelled='showHeartRateRequestDialog = false'>
       </time-series-request>
     </div>
     <div id='plot-container'>
