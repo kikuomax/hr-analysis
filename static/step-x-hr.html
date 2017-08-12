@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width initial-scale=1'>
+  <title>Step &times; HR</title>
+  <link rel='stylesheet' href='/lib/bootstrap-3.3.7/css/bootstrap.min.css'>
+  <script src='/lib/jquery-3.2.1.min.js'></script>
+  <script src='/lib/bootstrap-3.3.7/js/bootstrap.min.js'></script>
+  <script src='/lib/d3.min.js'></script>
+  <script src='/lib/vue.min.js'></script>
+  <script src='/lib/URI-1.18.10.js'></script>
+  <script src='/scripts/TimeSeriesRequest.js'></script>
+  <script>
+    $(() => {
+        const model = new Vue({
+            el: '#request-form',
+            data: {
+                showDataRequestDialog: false
+            },
+            methods: {
+                // NOTE: you cannot use the arrow notation here
+                //       because it screws up `this` binding
+                requestData: function (timeSpan) {
+                    requestData(timeSpan);
+                    this.showDataRequestDialog = false;
+                }
+            }
+        });
+
+        // prepares the plot area
+        const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        const plotContainer = document.getElementById('plot-container');
+        const svg = d3.select(plotContainer).append('svg');
+        svg.attr('width', plotContainer.clientWidth);
+        svg.attr('height', plotContainer.clientHeight);
+        const width =
+            plotContainer.clientWidth - (margin.left + margin.right);
+        const height =
+            plotContainer.clientHeight - (margin.top + margin.bottom);
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
+        const x = d3.scaleLinear()
+            .domain([0, 300])
+            .rangeRound([0, width]);
+        const y = d3.scaleLinear()
+            .domain([30, 200])
+            .rangeRound([height, 0]);
+        const xAxis = g.append('g')
+            .attr('class', 'axis axis-x')
+            .attr('transform', `translate(0, ${height})`)
+            .call(d3.axisBottom(x).ticks(5));
+        const yAxis = g.append('g')
+            .attr('class', 'axis axis-y')
+            .call(d3.axisLeft(y));
+
+        // requests the step count and heart rate
+        function requestData(timeSpan) {
+            const timeSpanQuery = {
+                date: `${timeSpan.year}-${timeSpan.month}-${timeSpan.day}`,
+                startTime: `${timeSpan.startHour}:${timeSpan.startMinute}`,
+                stopTime: `${timeSpan.stopHour}:${timeSpan.stopMinute}`
+            };
+            const stepUri =
+                new URI('/data/step-count.json').query(timeSpanQuery);
+            const hrUri =
+                new URI('/data/heart-rate.json').query(timeSpanQuery);
+            $.when(
+                $.ajax(stepUri.toString()),
+                $.ajax(hrUri.toString()))
+                    .done((stepResults, hrResults) => {
+                        const stepContents = stepResults[0];
+                        const hrContents = hrResults[0];
+                        const stepDate =
+                            stepContents['activities-steps'][0].dateTime;
+                        const stepSeries =
+                            stepContents['activities-steps-intraday'].dataset
+                                .map(timeSeriesTimeParser(stepDate));
+                        const hrDate =
+                            hrContents['activities-heart'][0].dateTime;
+                        const hrSeries =
+                            hrContents['activities-heart-intraday'].dataset
+                                .map(timeSeriesTimeParser(hrDate));
+                        const hrBySteps = stepSeries.map(d => {
+                            const startMs = d.time.getTime();
+                            const stopMs = startMs + (60 * 1000);  // exclusive
+                            // use binary search
+                            const subHRs = hrSeries.filter((d) => {
+                                const hrMs = d.time.getTime();
+                                return (startMs <= hrMs) && (hrMs < stopMs);
+                            });
+                            let meanHR;
+                            if (subHRs.length !== 0) {
+                                meanHR = subHRs.reduce((sum, d) => {
+                                    return sum + d.value;
+                                }, 0) / subHRs.length;
+                            } else {
+                                meanHR = null;
+                            }
+                            return {
+                                time: d.time,
+                                stepCount: d.value,
+                                heartRate: meanHR
+                            };
+                        }).filter(d => d.heartRate != null);
+                        const dots = g.selectAll('.dot')
+                            .data(hrBySteps)
+                            .attr('class', 'dot')
+                            .attr('r', 1.5)
+                            .attr('cx', d => x(d.stepCount))
+                            .attr('cy', d => y(d.heartRate))
+                            .style('fill', 'steelblue');
+                        dots.enter()
+                            .append('circle')
+                            .attr('class', 'dot')
+                            .attr('r', 1.5)
+                            .attr('cx', d => x(d.stepCount))
+                            .attr('cy', d => y(d.heartRate))
+                            .style('fill', 'steelblue');
+                        dots.exit()
+                            .remove();
+                    });
+        }
+
+        // returns a parser function of time fields in time series
+        function timeSeriesTimeParser(date) {
+            return function (d) {
+                d.time = parseDateTime(`${date}T${d.time}`);
+                return d;
+            };
+        }
+
+        // shows the data request form
+        model.showDataRequestDialog = true;
+    });
+  </script>
+  <style type='text/css'>
+    #plot-container {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div id='request-form'>
+      <div>
+        <button type='button' class='btn btn-primary'
+            v-on:click='showDataRequestDialog = true'>Request data</button>
+      </div>
+      <time-series-request
+          name='Step\u00D7HR'
+          v-bind:show-dialog='showDataRequestDialog'
+          id-prefix='data'
+          v-on:time-series-request-confirmed='requestData'
+          v-on:time-series-request-cancelled='showDataRequestDialog = false'>
+      </time-series-request>
+    </div>
+    <div id='plot-container'></div>
+  </div>
+</body>
+</html>
+

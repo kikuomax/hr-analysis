@@ -124,6 +124,13 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
+			path: '/step-x-hr',
+			handler: {
+				file: './static/step-x-hr.html'
+			}
+		});
+		server.route({
+			method: 'GET',
 			path: '/lib/{param*}',
 			handler: {
 				directory: {
