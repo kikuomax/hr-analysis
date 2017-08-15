@@ -1,0 +1,36 @@
+@media (orientation: portrait) {
+	.time-series-plot {
+		width: 100%;
+		height: 250px;
+	}
+}
+@media (orientation: landscape) {
+	.time-series-plot {
+		width: 100%;
+		height: 250px;
+	}
+}
+@media (min-width: 700px) {
+	.time-series-plot {
+		width: 100%;
+		height: 350px;
+	}
+}
+@media (min-width: 1000px) {
+	.time-series-plot {
+		width: 100%;
+		height: 500px;
+	}
+}
+
+.scatter-plot {
+	width: 280px;
+	height: 270px;
+}
+@media (min-width: 600px) and (orientation: portrait), (min-width: 1000px) {
+	.scatter-plot {
+		width: 560px;
+		height: 550px;
+	}
+}
+

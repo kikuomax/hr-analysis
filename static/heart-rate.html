@@ -2,9 +2,10 @@
 <html>
 <head>
   <meta charset='utf-8'>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
   <title>Personal HR Analysis: HR</title>
   <link rel='stylesheet' href='/lib/bootstrap-3.3.7/css/bootstrap.min.css'>
+  <link rel='stylesheet' href='/css/hr-analysis.css'>
   <script src='/lib/jquery-3.2.1.min.js'></script>
   <script src='/lib/bootstrap-3.3.7/js/bootstrap.min.js'></script>
   <script src='/lib/vue.min.js'></script>
@@ -128,12 +129,6 @@
         model.showHeartRateRequestDialog = true;
     });
   </script>
-  <style type='text/css'>
-    #plot-container {
-      width: 100%;
-      height: 300px;
-    }
-  </style>
 </head>
 <body>
   <div class='container'>
@@ -150,7 +145,7 @@
           v-on:time-series-request-cancelled='showHeartRateRequestDialog = false'>
       </time-series-request>
     </div>
-    <div id='plot-container'>
+    <div id='plot-container' class='time-series-plot'>
       <svg id='plot-area'>
         <defs>
           <marker id='circle-marker'

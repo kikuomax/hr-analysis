@@ -131,6 +131,16 @@ server.register([
 		});
 		server.route({
 			method: 'GET',
+			path: '/css/{param*}',
+			handler: {
+				directory: {
+					path: './static/css',
+					index: false
+				}
+			}
+		});
+		server.route({
+			method: 'GET',
 			path: '/lib/{param*}',
 			handler: {
 				directory: {
