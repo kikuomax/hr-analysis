@@ -32,30 +32,73 @@
 
         // prepares the plot area
         const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
         const plotContainer = document.getElementById('plot-container');
         const svg = d3.select(plotContainer).append('svg');
         svg.attr('width', plotContainer.clientWidth);
         svg.attr('height', plotContainer.clientHeight);
-        const width =
+        const viewWidth =
             plotContainer.clientWidth - (margin.left + margin.right);
-        const height =
+        const viewHeight =
             plotContainer.clientHeight - (margin.top + margin.bottom);
-        const g = svg.append('g')
+        svg.append('defs').append('clipPath')
+            .attr('id', 'view-clip')
+            .append('rect')
+                .attr('width', viewWidth)
+                .attr('height', viewHeight);
+        const base = svg.append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
-        const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
-        const x = d3.scaleLinear()
+        const frame = base.append('g')
+            .attr('clip-path', 'url(#view-clip)');
+        const view = frame.append('g');
+            // transformation on view is clipped by frame
+        // prepares scales and axes
+        const baseX = d3.scaleLinear()
             .domain([0, 300])
-            .rangeRound([0, width]);
-        const y = d3.scaleLinear()
+            .range([0, viewWidth]);
+        let x = baseX.copy();  // x will be replaced when zoomed
+        const baseY = d3.scaleLinear()
             .domain([30, 200])
-            .rangeRound([height, 0]);
-        const xAxis = g.append('g')
+            .range([viewHeight, 0]);
+        let y = baseY.copy();  // y will be replaced when zoomed
+        const MIN_TICKS = 5;
+        const MAX_TICKS = 20;
+        const MIN_TICK_INTERVAL = 60;
+        function calculateTicks(length) {
+            return Math.max(
+                MIN_TICKS,
+                Math.min(
+                    Math.floor(length / MIN_TICK_INTERVAL),
+                    MAX_TICKS));
+        }
+        const xAxis = d3.axisBottom(x)
+            .ticks(calculateTicks(viewWidth));
+        const yAxis = d3.axisLeft(y)
+            .ticks(calculateTicks(viewHeight));
+        const gX = base.append('g')
             .attr('class', 'axis axis-x')
-            .attr('transform', `translate(0, ${height})`)
-            .call(d3.axisBottom(x).ticks(5));
-        const yAxis = g.append('g')
+            .attr('transform', `translate(0, ${viewHeight})`)
+            .call(xAxis);
+        const gY = base.append('g')
             .attr('class', 'axis axis-y')
-            .call(d3.axisLeft(y));
+            .call(yAxis);
+        // captures zoom and translation events
+        const zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .translateExtent([[0, 0], [viewWidth, viewHeight]])
+            .extent([[0, 0], [viewWidth, viewHeight]])
+            .on('zoom', () => {
+                x = d3.event.transform.rescaleX(baseX);
+                y = d3.event.transform.rescaleY(baseY);
+                gX.call(xAxis.scale(x));
+                gY.call(yAxis.scale(y));
+                view.attr('transform', d3.event.transform);
+            });
+        frame.append('rect')
+            .attr('class', 'zoom')
+            .attr('width', viewWidth)
+            .attr('height', viewHeight)
+            .call(zoom);
 
         // requests the step count and heart rate
         function requestData(timeSpan) {
@@ -116,20 +159,18 @@
                                 heartRate: meanHR
                             };
                         }).filter(d => d.heartRate != null);
-                        const dots = g.selectAll('.dot')
+                        const dots = view.selectAll('.dot')
                             .data(hrBySteps)
                             .attr('class', 'dot')
                             .attr('r', 1.5)
                             .attr('cx', d => x(d.stepCount))
-                            .attr('cy', d => y(d.heartRate))
-                            .style('fill', 'steelblue');
+                            .attr('cy', d => y(d.heartRate));
                         dots.enter()
                             .append('circle')
                             .attr('class', 'dot')
                             .attr('r', 1.5)
                             .attr('cx', d => x(d.stepCount))
-                            .attr('cy', d => y(d.heartRate))
-                            .style('fill', 'steelblue');
+                            .attr('cy', d => y(d.heartRate));
                         dots.exit()
                             .remove();
                     });
@@ -137,7 +178,7 @@
 
         // returns a parser function of time fields in time series
         function timeSeriesTimeParser(date) {
-            return function (d) {
+            return d => {
                 d.time = parseDateTime(`${date}T${d.time}`);
                 return d;
             };
@@ -152,6 +193,16 @@
         model.showDataRequestDialog = true;
     });
   </script>
+  <style>
+    .zoom {
+      fill: none;
+      pointer-events: all;
+    }
+
+    .dot {
+      fill: steelblue;
+    }
+  </style>
 </head>
 <body>
   <div class='container'>
