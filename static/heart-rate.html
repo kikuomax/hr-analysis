@@ -6,6 +6,12 @@
   <title>Personal HR Analysis: HR</title>
   <link rel='stylesheet' href='/lib/bootstrap-3.3.7/css/bootstrap.min.css'>
   <link rel='stylesheet' href='/css/hr-analysis.css'>
+  <style>
+    .zoom {
+      fill: none;
+      pointer-events: all;
+    }
+  </style>
   <script src='/lib/jquery-3.2.1.min.js'></script>
   <script src='/lib/bootstrap-3.3.7/js/bootstrap.min.js'></script>
   <script src='/lib/vue.min.js'></script>
@@ -31,29 +37,60 @@
         });
 
         // prepares the plot area
-        const margin = {
-            top: 20,
-            right: 20,
-            bottom: 30,
-            left: 50
-        };
-        const container = document.querySelector('#plot-container');
-        const svg = d3.select('#plot-area');
-        svg.attr('width', container.clientWidth);
-        svg.attr('height', container.clientHeight);
-        const width = container.clientWidth - (margin.left + margin.right);
-        const height = container.clientHeight - (margin.top + margin.bottom);
-        const g = svg.append('g')
-            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const margin = { top: 20, right: 20, bottom: 30, left: 50 };
         const parseDateTime = d3.timeParse('%Y-%m-%dT%H:%M:%S');
-        const x = d3.scaleTime().rangeRound([0, width]);
-        const y = d3.scaleLinear().rangeRound([height, 0]);
-        y.domain([30, 200]);
+        const plotContainer = document.querySelector('#plot-container');
+        const svg = d3.select('#plot-area');
+        svg.attr('width', plotContainer.clientWidth);
+        svg.attr('height', plotContainer.clientHeight);
+        const viewWidth =
+            plotContainer.clientWidth - (margin.left + margin.right);
+        const viewHeight =
+            plotContainer.clientHeight - (margin.top + margin.bottom);
+        svg.select('defs')  // defs already exists
+            .append('clipPath')
+                .attr('id', 'view-clip')
+                .append('rect')
+                    .attr('width', viewWidth)
+                    .attr('height', viewHeight);
+        const base = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const frame = base.append('g')
+            .attr('clip-path', 'url(#view-clip)');
+        const view = frame.append('g');
+        const baseX = d3.scaleTime()
+            .range([0, viewWidth]);
+        let x = baseX.copy();
+        const y = d3.scaleLinear()
+            .domain([30, 200])
+            .range([viewHeight, 0]);
+        const MIN_TICKS = 5;
+        const MAX_TICKS = 20;
+        const MIN_TICK_INTERVAL_X = 60;
+        const MIN_TICK_INTERVAL_Y = 30;
+        function calculateTicks(length, minInterval) {
+            return Math.max(
+                MIN_TICKS,
+                Math.min(
+                    Math.floor(length / minInterval),
+                    MAX_TICKS));
+        }
+        const xAxis = d3.axisBottom(x)
+            .ticks(calculateTicks(viewWidth, MIN_TICK_INTERVAL_X));
+        const yAxis = d3.axisLeft(y)
+            .ticks(calculateTicks(viewHeight, MIN_TICK_INTERVAL_Y));
+        const gX = base.append('g')
+            .attr('class', 'axis axis-x')
+            .attr('transform', `translate(0, ${viewHeight})`)
+            .call(xAxis);
+        const gY = base.append('g')
+            .attr('class', 'axis axis-y')
+            .call(yAxis);
         const line = d3.line()
-            .defined((d) => d)
-            .x((d) => x(d.time))
-            .y((d) => y(d.value));
-        const path = g.append('path')
+            .defined(d => d)
+            .x(d => x(d.time))
+            .y(d => y(d.value));
+        const path = view.append('path')
             .attr('fill', 'none')
             .attr('stroke', 'steelblue')
             .attr('stroke-linejoin', 'round')
@@ -62,15 +99,24 @@
             .attr('marker-start', 'url(#circle-marker)')
             .attr('marker-mid', 'url(#circle-marker)')
             .attr('marker-end', 'url(#circle-marker)');
-        const xAxis = g.append('g')
-            .attr('class', 'axis axis-x')
-            .attr('transform', `translate(0, ${height})`)
-            .call(d3.axisBottom(x));
-        g.append('g')
-            .attr('class', 'axis axis-y')
-            .call(d3.axisLeft(y));
+        // catures zoom and translation events
+        const zoom = d3.zoom()
+            .scaleExtent([1, 1])
+            .translateExtent([[0, 0], [viewWidth, viewHeight]])
+            .extent([[0, 0], [viewWidth, viewHeight]])
+            .on('zoom', () => {
+                x = d3.event.transform.rescaleX(baseX);
+                gX.call(xAxis.scale(x));
+                zoomPath();
+            });
+        frame.append('rect')
+            .attr('class', 'zoom')
+            .attr('width', viewWidth)
+            .attr('height', viewHeight)
+            .call(zoom);
 
         // requests the heart rate and renders it
+        let zoomPath = () => {};  // should be called when zoomed
         function requestHeartRate(timeSpan) {
             const uri = new URI('/data/heart-rate.json').query({
                 date: `${timeSpan.year}-${timeSpan.month}-${timeSpan.day}`,
@@ -78,14 +124,14 @@
                 stopTime: `${timeSpan.stopHour}:${timeSpan.stopMinute}`
             });
             $.ajax(uri.toString())
-                .done((contents) => {
+                .done(contents => {
                     const date = contents['activities-heart'][0].dateTime;
                     let data = contents['activities-heart-intraday'].dataset
                         .map((d) => {
                             d.time = parseDateTime(`${date}T${d.time}`);
                             return d;
                         });
-                    x.domain([
+                    baseX.domain([
                         new Date(
                             timeSpan.year,
                             timeSpan.month - 1,
@@ -98,23 +144,33 @@
                             timeSpan.day,
                             timeSpan.stopHour,
                             timeSpan.stopMinute)]);
+                    x = baseX.copy();
+                    gX.call(xAxis.scale(x));
                     data = chunkData(data);
                     data = data.map((d) => d.concat([null]));
                     data = Array.prototype.concat.apply([], data);
-                    xAxis.call(d3.axisBottom(x));
                     path.datum(data)
                         .attr('d', line);
+                    zoomPath = () => {
+                        // just reapplies the line
+                        // is there any better way to zoom?
+                        path.attr('d', line);
+                    }
+                    // resets the zoom
+                    zoom.scaleExtent([1, calculateMaxScale(baseX.domain())]);
+                    svg.select('.zoom')
+                        .call(zoom.transform, d3.zoomIdentity);
                 });
         }
 
         function chunkData(data) {
-            const MAX_GAP = 15 * 1000;  // in milliseconds
+            const MAX_GAP_IN_MILLIS = 15 * 1000;
             const chunks = [];
             let chunkStart = 0;
             for (let i = 0; (i + 1) < data.length; ++i) {
                 const gap =
                     data[i + 1].time.getTime() - data[i].time.getTime();
-                if (gap > MAX_GAP) {
+                if (gap > MAX_GAP_IN_MILLIS) {
                     chunks.push(data.slice(chunkStart, i + 1));
                     chunkStart = i + 1;
                 }
@@ -125,6 +181,14 @@
             return chunks;
         }
 
+        // calculates the maximum scale for a given domain
+        // elements of domain should be Date
+        function calculateMaxScale(domain) {
+            const MAX_RESOLUTION_IN_MILLIS = 60 * 1000;
+            const deltaT = domain[1].getTime() - domain[0].getTime();
+            return Math.max(1, deltaT / MAX_RESOLUTION_IN_MILLIS);
+        }
+
         // shows the heart rate request form
         model.showHeartRateRequestDialog = true;
     });
@@ -132,6 +196,16 @@
 </head>
 <body>
   <div class='container'>
+    <div id='plot-container' class='time-series-plot'>
+      <svg id='plot-area'>
+        <defs>
+          <marker id='circle-marker'
+              markerWidth='3' markerHeight='3' refX='1' refY='1'>
+            <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
+          </marker>
+        </defs>
+      </svg>
+    </div>
     <div id='request-form'>
       <div>
         <button type='button' class='btn btn-primary'
@@ -144,16 +218,6 @@
           v-on:time-series-request-confirmed='requestHeartRate'
           v-on:time-series-request-cancelled='showHeartRateRequestDialog = false'>
       </time-series-request>
-    </div>
-    <div id='plot-container' class='time-series-plot'>
-      <svg id='plot-area'>
-        <defs>
-          <marker id='circle-marker'
-              markerWidth='3' markerHeight='3' refX='1' refY='1'>
-            <circle cx='1' cy='1' r='1' style='stroke: none; fill: #000000' />
-          </marker>
-        </defs>
-      </svg>
     </div>
   </div>
 </body>
