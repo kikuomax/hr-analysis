@@ -14,7 +14,6 @@
 
     .dot {
       fill: steelblue;
-      r: 1.2;
     }
   </style>
   <script src='/lib/jquery-3.2.1.min.js'></script>
@@ -173,11 +172,13 @@
                         const dots = view.selectAll('.dot')
                             .data(hrBySteps)
                             .attr('class', 'dot')
+                            .attr('r', 1.2)
                             .attr('cx', d => x(d.stepCount))
                             .attr('cy', d => y(d.heartRate));
                         dots.enter()
                             .append('circle')
                             .attr('class', 'dot')
+                            .attr('r', 1.2)
                             .attr('cx', d => x(d.stepCount))
                             .attr('cy', d => y(d.heartRate));
                         dots.exit()
