@@ -207,16 +207,17 @@ server.register([
 					json: true,
 					cors: true  // Authorization needs preflight
 				};
-				Wreck.get(
-					'https://api.fitbit.com/1/user/-/profile.json',
-					requestOptions,
-					(err, response, payload) => {
-						if (err) {
-							console.log(err);
-							return reply(err);
-						}
+				(async function () {
+					try {
+						const { res, payload } = await Wreck.get(
+							'https://api.fitbit.com/1/user/-/profile.json',
+							requestOptions);
 						return reply(payload);
-					});
+					} catch (err) {
+						console.log(err);
+						return reply(err);
+					}
+				})();
 			}
 		});
 		server.route({
@@ -314,15 +315,14 @@ function requestIntradayTimeSeries(
 		json: true,
 		cors: true  // Authorization needs preflight
 	};
-	Wreck.get(
-		apiUri,
-		requestOptions,
-		(err, response, payload) => {
-			if (err) {
-				console.log(err);
-				return reply(err);
-			}
+	(async function () {
+		try {
+			const { res, payload } = await Wreck.get(apiUri, requestOptions);
 			return reply(payload);
-		});
+		} catch (err) {
+			console.log(err);
+			return reply(err);
+		}
+	})();
 }
 
