@@ -13,23 +13,26 @@ This application currently has the following features,
 
  - [HR time series plot](#hr-time-series-plot)
  - [Step count time series plot](#step-count-time-series-plot)
- - [Step count &times; HR scatter plot](#step-count-hr-scatter-plot)
+ - [Step count &times; HR scatter plot](#step-count--hr-scatter-plot)
 
 ### HR time series plot
 
 Here is an example of an HR time series plot.
+The x-axis and y-axis represent time and HR respectively.
 
 ![HR time series example](doc/img/hr-plot.png)
 
 ### Step count time series plot
 
 Here is an example of a step count time series plot.
+The x-axis and y-axis represent time and step count respectively.
 
 ![Step count time series example](doc/img/step-count-plot.png)
 
 ### Step count &times; HR scatter plot
 
 Here is an example of a scatter plot between step count and HR.
+The x-axis and y-axis represent step count and HR respectively.
 
 ![Step count &times; HR scatter plot example](doc/img/step-x-hr-plot.png)
 
@@ -103,28 +106,18 @@ Please take the following steps to run the application locally,
 
 ## Libraries
 
-This application depends on the following libraries,
+This application directly depends on the following libraries,
 
- - [hapi](https://hapijs.com):
-
- - [bell](https://github.com/hapijs/bell):
-
+ - [hapi](https://hapijs.com)
+ - [bell](https://github.com/hapijs/bell)
  - [wreck](https://github.com/hapijs/wreck)
-
  - [hapi-auth-cookie](https://github.com/hapijs/hapi-auth-cookie)
-
  - [inert](https://github.com/hapijs/inert)
-
  - [good](https://github.com/hapijs/good)
-
  - [boom](https://github.com/hapijs/boom)
-
  - [Vue.js](https://vuejs.org)
-
  - [D3.js](https://d3js.org)
-
  - [jQuery](https://jquery.com)
-
  - [URI.js](https://medialize.github.io/URI.js/)
 
 ## Reference
